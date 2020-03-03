@@ -1,0 +1,116 @@
+---
+title: "MATH2270 Assignment 2"
+subtitle: Visualising Open Data
+output:
+  html_document: default
+  html_notebook: default
+  pdf_document: default
+---
+
+## Student Details
+
+* Carlos Castillo (s3643370)
+
+#Load the packages
+```{r}
+install.packages("rgeos") 
+install.packages("maptools") 
+install.packages("ggmap") 
+install.packages("broom") 
+install.packages("tidyr")
+install.packages("dplyr")
+install.packages("cowplot")
+install.packages("devtools")
+install.packages("ggplot2")
+library("ggplot2")
+library(rgeos)
+library(maptools)
+library(ggmap)
+library(broom)
+library(sp)
+library(tidyr)
+library(dplyr)
+library(cowplot)
+library(devtools)
+
+devtools::install_github("dkahle/ggmap")
+```
+
+## Data
+
+```{r}
+# Load your data and prepare for visualisation
+NYC_Rat_Sightings <- read.csv("/Users/A/Documents/RMIT/Semester 2/Data Visualization/Assignment 2/Rat_Sightings_2.csv")
+ValidBoroughs <- c('BROOKLYN','BRONX','MANHATTAN','QUEENS','STATEN ISLAND')
+NYC_Rat_Sightings <- filter(NYC_Rat_Sightings,Borough %in% ValidBoroughs)
+ValidStatus <- c('Pending','Assigned','Closed')
+NYC_Rat_Sightings <- filter(NYC_Rat_Sightings,Status %in% ValidStatus)
+```
+
+
+## Visualisation 1
+
+```{r}
+# Visualise Your Data
+##Plot # 1
+NYC <- get_map(location = c(lon = -74.00, lat = 40.71), maptype = "terrain", zoom = 11)
+Plot1 <- ggmap(NYC)
+P1<-Plot1+geom_point(data= NYC_Rat_Sightings, aes(x =Longitude, y = Latitude,colour=NYC_Rat_Sightings$Borough),
+                size=0.01, alpha = .5,na.rm=TRUE)+ labs(title = "NYC Rat Sightings by Borough",
+       x = "Longitude", y = "Latitude",colour="City")+scale_colour_brewer(palette="Set1")+theme(plot.title = element_text(face="bold",size=12),legend.position = "none",axis.ticks = element_line(colour="grey70",size=0.2),panel.grid.major = element_line(colour="grey70",size=0.2),panel.grid.minor = element_blank(),legend.text = element_text(size=7))+annotate("text", x = -73.949997, y = 40.650002, label = "BROOKLYN", size=3,fontface = "bold")+annotate("text", x = -73.8648, y = 40.8448, label = "BRONX", size=3,fontface = "bold")+annotate("text", x = -73.9712, y = 40.7831, label = "MANHATTAN", size=3,fontface = "bold")+annotate("text", x = -73.82, y = 40.7282, label = "QUEENS", size=3,fontface = "bold")+annotate("text", x = -74.1502, y = 40.5795, label = "STATEN ISLAND", size=3,fontface = "bold")
+P1
+```
+
+## Visualisation 2
+
+```{r}
+##Plot 2
+
+NYC_sum <- NYC_Rat_Sightings %>% group_by(Borough1,Status) %>% summarise(count= n())
+Plot2 <- ggplot(data = NYC_sum ,aes(x=Status,y=count))
+P2<-Plot2 + geom_bar(stat = "identity",fill = "mediumseagreen")+ylim(0,30000) + facet_wrap(~Borough1)+ theme(axis.text.x=element_text(angle=45,hjust=1,size = 2),plot.title = element_text(face="bold",size=12)) +
+  labs(title = "NYC Rat Sightings Inspection Status by Borough",
+       y = "Quantity of Complaints",
+       x = "Inspection Status")+
+  geom_text(aes(label=round(count)), vjust = -0.5,position = position_dodge(width = 1), size = 3)+theme_bw()+theme(axis.text=element_text(size=8))
+P2
+```
+
+## Visualisation 3
+```{r}
+## Plot # 3
+NYC_sum2 <- NYC_Rat_Sightings %>% group_by(YEAR,Borough1) %>% summarise(count= n())
+
+Plot4 <- ggplot(NYC_sum2, aes(x =YEAR,y=count,colour=Borough1,group=Borough1))
+P4<-Plot4 + geom_line(stat="identity")+facet_wrap(~Borough1)+ylim(-100,7000)+ 
+  labs(title = "NYC Number of Rat Sightings by Borough (2010 -2017)",
+       y = "Quantity of Complaints",
+       x = "Year",fill="City")+
+  scale_fill_brewer(palette="Set1")+theme_bw()+theme(plot.title = element_text(face="bold",size=12),legend.position = "none",axis.ticks = element_line(colour="grey70",size=0.2),panel.grid.major = element_line(colour="grey70",size=0.2),panel.grid.minor = element_blank(),legend.text = element_text(size=4))+theme(axis.text=element_text(size=7))+geom_text(data=subset(NYC_sum2,YEAR==2016),aes(x = YEAR,y=count,label=round(count)),position = position_dodge(width = 1),vjust = -1,hjust=-0.3, size = 3,colour='Black')
+P4
+
+```
+
+## Visualisation Summary
+```{r,fig.width=15,fig.height=7.55}
+##Plot 4
+
+title1=textGrob("NEW YORK CITY (NYC) RAT SIGHTINGS FROM 2010 TO 2017
+               ",gp=gpar(fontface="bold",fontsize=16, col="navy"))
+PF1<-grid.arrange(P1,                            
+            arrangeGrob(P4, P2, nrow = 2), nrow = 1,top=title1,
+            bottom=textGrob("Source(s): https://www.kaggle.com/new-york-city/nyc-rat-sightings",gp=gpar(fontsize=10, col="gray40")))
+PF1
+
+```
+
+##Caption
+The slide you are seeing now contains data from September 2010 to September 2017. The first plot is the geographical location where all the rat sighting complaints have been made. Manhattan, Bronx and northern Brooklyn have been the most affected areas, as you can see in the chart.
+
+The second plot confirms the first, which illustrates that 34673 out of 101914 rats have been seen in Brooklyn, followed by Manhattan and the Bronx with 26803 and 20706 respectively.
+
+This plot also elucidates that Bronx rat sighting was flat until 2013, from 2014 to 2016 has been continuously growing until reach the maximum peak in 2016. A similar behavior is seen in Brooklyn, Manhattan and Queens, while Staten Island remind flat all over the years.
+It is important to note that 2016 is the peak of rat sighting, the reason could be that the rat population is increasing, or the New York City habitants are using the complaint services more than in the past.
+
+The last plot, which most interests the New York City Department of Health, shows the state of claims made over time, for example Brooklyn, has closed 26551 cases, while it has 6464 pending and 1658 new assignments. In that sense, Manhattan has a huge task to execute, since they have 7842 pending cases over 26803, which represents 29% of their complaints.
+
